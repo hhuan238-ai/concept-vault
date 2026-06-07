@@ -472,7 +472,6 @@ pre {
 }
 
 .suggestion pre,
-.translation-output,
 .markdown-answer {
   min-height: 190px;
   border-radius: 8px;
@@ -637,10 +636,6 @@ select {
   min-height: 42px;
   border-radius: 8px;
   padding: 0 10px;
-}
-
-.translation-output {
-  margin-top: 10px;
 }
 
 .api-key-row {

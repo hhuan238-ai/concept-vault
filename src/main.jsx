@@ -323,13 +323,10 @@ function translateText(text, sourceLang, targetLang) {
   return translated;
 }
 
-function AnswerContent({ value, mode }) {
-  const fallback = mode === "basic"
-    ? "搜尋後會在這裡顯示依據檢索結果產生的建議。"
-    : "精確回答會顯示在這裡。";
+function FormattedOutput({ value, mode = "markdown", fallback }) {
   const content = value || fallback;
 
-  if (mode === "basic") {
+  if (mode === "plain") {
     return <pre>{content}</pre>;
   }
 
@@ -345,6 +342,19 @@ function AnswerContent({ value, mode }) {
   );
 }
 
+function AnswerContent({ value, mode }) {
+  const fallback = mode === "basic"
+    ? "Search results will appear here."
+    : "Precise answer will appear here.";
+
+  return (
+    <FormattedOutput
+      value={value}
+      mode={mode === "basic" ? "plain" : "markdown"}
+      fallback={fallback}
+    />
+  );
+}
 function inferSlideNumber(text) {
   const normalized = text.replace(/\s+/g, " ").trim();
   const trailingNumber = normalized.match(/(?:^|[\s;:])(\d{1,4})$/);
@@ -1196,7 +1206,7 @@ function App() {
                   onChange={(event) => setTranslationInput(event.target.value)}
                   placeholder="輸入要翻譯的詞句，或使用上方按鈕帶入目前提問/回答。"
                 />
-                <pre className="translation-output">{translationOutput || "翻譯結果會顯示在這裡。"}</pre>
+                <FormattedOutput value={translationOutput} fallback="Translation output will appear here." />
               </section>
 
             </div>
