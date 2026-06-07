@@ -1,5 +1,9 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { createRoot } from "react-dom/client";
+import ReactMarkdown from "react-markdown";
+import rehypeKatex from "rehype-katex";
+import remarkGfm from "remark-gfm";
+import remarkMath from "remark-math";
 import {
   ArrowLeft,
   BookOpen,
@@ -20,6 +24,7 @@ import initSqlJs from "sql.js";
 import * as mammoth from "mammoth/mammoth.browser";
 import * as pdfjsLib from "pdfjs-dist";
 import sqlWasmUrl from "sql.js/dist/sql-wasm.wasm?url";
+import "katex/dist/katex.min.css";
 import "./styles.css";
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
@@ -316,6 +321,28 @@ function translateText(text, sourceLang, targetLang) {
     return `本地詞庫目前沒有足夠詞條可完整翻譯。\n來源：${sourceLabel}\n目標：${targetLabel}\n\n${text}`;
   }
   return translated;
+}
+
+function AnswerContent({ value, mode }) {
+  const fallback = mode === "basic"
+    ? "搜尋後會在這裡顯示依據檢索結果產生的建議。"
+    : "精確回答會顯示在這裡。";
+  const content = value || fallback;
+
+  if (mode === "basic") {
+    return <pre>{content}</pre>;
+  }
+
+  return (
+    <div className="markdown-answer">
+      <ReactMarkdown
+        remarkPlugins={[remarkGfm, remarkMath]}
+        rehypePlugins={[rehypeKatex]}
+      >
+        {content}
+      </ReactMarkdown>
+    </div>
+  );
 }
 
 function inferSlideNumber(text) {
@@ -1119,9 +1146,7 @@ function App() {
                     <Sparkles size={17} />
                     <h3>{questionMode === "basic" ? "模板式建議" : "精確回答"}</h3>
                   </div>
-                  <pre>{suggestion || (questionMode === "basic"
-                    ? "搜尋後會在這裡顯示依據此專案資料產生的建議。"
-                    : "精確回答會顯示在這裡。")}</pre>
+                  <AnswerContent value={suggestion} mode={questionMode} />
                 </div>
               </section>
 
