@@ -8,7 +8,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 let mainWindow;
-const AI_MODEL = process.env.OPENAI_MODEL || "gpt-5.5";
+const DEFAULT_AI_MODEL = "gpt-5.5";
 
 function logRuntimeError(message) {
   const logPath = path.join(app.getPath("userData"), "runtime-errors.log");
@@ -37,6 +37,16 @@ function writeSettings(settings) {
 
 function getApiKey() {
   return process.env.OPENAI_API_KEY || readSettings().openaiApiKey || "";
+}
+
+function getAiModel() {
+  const settings = readSettings();
+  return String(settings.aiModel || process.env.OPENAI_MODEL || DEFAULT_AI_MODEL).trim() || DEFAULT_AI_MODEL;
+}
+
+function getAppLanguage() {
+  const language = String(readSettings().appLanguage || "zh-Hant");
+  return ["zh-Hant", "en"].includes(language) ? language : "zh-Hant";
 }
 
 function cleanModelText(text) {
@@ -114,7 +124,9 @@ ipcMain.handle("open-external", async (_event, url) => {
 });
 
 ipcMain.handle("ai-status", async () => ({
-  model: AI_MODEL,
+  model: getAiModel(),
+  defaultModel: DEFAULT_AI_MODEL,
+  appLanguage: getAppLanguage(),
   hasApiKey: Boolean(getApiKey())
 }));
 
@@ -125,6 +137,24 @@ ipcMain.handle("save-openai-key", async (_event, apiKey) => {
   settings.openaiApiKey = trimmed;
   writeSettings(settings);
   return { hasApiKey: true };
+});
+
+ipcMain.handle("save-app-settings", async (_event, payload) => {
+  const settings = readSettings();
+  const aiModel = String(payload?.aiModel || "").trim();
+  const appLanguage = String(payload?.appLanguage || "zh-Hant");
+  const apiKey = String(payload?.apiKey || "").trim();
+
+  if (aiModel) settings.aiModel = aiModel;
+  if (["zh-Hant", "en"].includes(appLanguage)) settings.appLanguage = appLanguage;
+  if (apiKey) settings.openaiApiKey = apiKey;
+
+  writeSettings(settings);
+  return {
+    model: getAiModel(),
+    appLanguage: getAppLanguage(),
+    hasApiKey: Boolean(getApiKey())
+  };
 });
 
 ipcMain.handle("chat-gpt", async (_event, payload) => {
@@ -140,6 +170,7 @@ ipcMain.handle("chat-gpt", async (_event, payload) => {
   if (!question) throw new Error("請先輸入問題。");
 
   const client = new OpenAI({ apiKey });
+  const aiModel = getAiModel();
   const input = mode === "project"
     ? [
         {
@@ -190,12 +221,12 @@ ipcMain.handle("chat-gpt", async (_event, payload) => {
       ];
 
   const response = await client.responses.create({
-    model: AI_MODEL,
+    model: aiModel,
     input
   });
 
   return {
-    model: AI_MODEL,
+    model: aiModel,
     output: cleanModelText(response.output_text)
   };
 });
@@ -212,8 +243,9 @@ ipcMain.handle("translate-ai", async (_event, payload) => {
   if (!text) throw new Error("請先輸入要翻譯的文字。");
 
   const client = new OpenAI({ apiKey });
+  const aiModel = getAiModel();
   const response = await client.responses.create({
-    model: AI_MODEL,
+    model: aiModel,
     input: [
       {
         role: "developer",
@@ -232,7 +264,7 @@ ipcMain.handle("translate-ai", async (_event, payload) => {
   });
 
   return {
-    model: AI_MODEL,
+    model: aiModel,
     output: cleanModelText(response.output_text)
   };
 });

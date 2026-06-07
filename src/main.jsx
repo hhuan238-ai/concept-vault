@@ -11,6 +11,7 @@ import {
   MessageSquare,
   Paperclip,
   Search,
+  Settings,
   Sparkles,
   Trash2,
   Upload
@@ -27,6 +28,15 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
 ).toString();
 
 const DB_KEY = "concept-vault.sqlite";
+const APP_LANGUAGES = [
+  { value: "zh-Hant", label: "繁體中文" },
+  { value: "en", label: "English" }
+];
+const AI_MODEL_OPTIONS = [
+  "gpt-5.5",
+  "gpt-5.4",
+  "gpt-5.4-mini"
+];
 const SOURCE_LANGS = [
   { value: "auto", google: "auto", label: "自動偵測" },
   { value: "zh-Hant", google: "zh-TW", label: "繁體中文" },
@@ -383,6 +393,11 @@ function App() {
   const [aiHasKey, setAiHasKey] = useState(false);
   const [questionMode, setQuestionMode] = useState("basic");
   const [aiBusy, setAiBusy] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [appLanguage, setAppLanguage] = useState("zh-Hant");
+  const [aiModel, setAiModel] = useState("gpt-5.5");
+  const [settingsApiKey, setSettingsApiKey] = useState("");
+  const [settingsBusy, setSettingsBusy] = useState(false);
 
   const activeProject = useMemo(
     () => projects.find((project) => project.id === activeProjectId),
@@ -419,6 +434,8 @@ function App() {
   useEffect(() => {
     window.conceptVault?.getAiStatus?.().then((info) => {
       setAiHasKey(Boolean(info?.hasApiKey));
+      if (info?.model) setAiModel(info.model);
+      if (info?.appLanguage) setAppLanguage(info.appLanguage);
     });
   }, []);
 
@@ -647,6 +664,27 @@ function App() {
       setStatus("OpenAI API key 已儲存在本機設定。");
     } catch (error) {
       setStatus(`API key 儲存失敗：${error.message}`);
+    }
+  }
+
+  async function saveAppSettings() {
+    setSettingsBusy(true);
+    try {
+      const info = await window.conceptVault?.saveAppSettings?.({
+        appLanguage,
+        aiModel,
+        apiKey: settingsApiKey.trim()
+      });
+      if (info?.model) setAiModel(info.model);
+      if (info?.appLanguage) setAppLanguage(info.appLanguage);
+      setAiHasKey(Boolean(info?.hasApiKey));
+      setSettingsApiKey("");
+      setSettingsOpen(false);
+      setStatus(appLanguage === "en" ? "Settings saved." : "設定已儲存。");
+    } catch (error) {
+      setStatus(`${appLanguage === "en" ? "Settings failed" : "設定儲存失敗"}：${error.message}`);
+    } finally {
+      setSettingsBusy(false);
     }
   }
 
@@ -1140,6 +1178,75 @@ function App() {
           </>
         )}
       </section>
+      <button
+        type="button"
+        className="floating-settings-button"
+        onClick={() => setSettingsOpen(true)}
+        title={appLanguage === "en" ? "Settings" : "設定"}
+        aria-label={appLanguage === "en" ? "Settings" : "設定"}
+      >
+        <Settings size={22} />
+      </button>
+
+      {settingsOpen && (
+        <div className="settings-overlay" role="dialog" aria-modal="true" aria-label={appLanguage === "en" ? "Settings" : "設定"}>
+          <section className="settings-panel">
+            <div className="settings-header">
+              <div>
+                <h2>{appLanguage === "en" ? "Settings" : "設定"}</h2>
+                <p>{appLanguage === "en" ? "Adjust language, default model, and API key." : "調整語言、預設模型與 API key。"}</p>
+              </div>
+              <button type="button" onClick={() => setSettingsOpen(false)} aria-label={appLanguage === "en" ? "Close" : "關閉"}>
+                ×
+              </button>
+            </div>
+
+            <label className="settings-field">
+              <span>{appLanguage === "en" ? "Language" : "語言"}</span>
+              <select value={appLanguage} onChange={(event) => setAppLanguage(event.target.value)}>
+                {APP_LANGUAGES.map((language) => (
+                  <option key={language.value} value={language.value}>{language.label}</option>
+                ))}
+              </select>
+            </label>
+
+            <label className="settings-field">
+              <span>{appLanguage === "en" ? "Default model" : "預設模型"}</span>
+              <select value={aiModel} onChange={(event) => setAiModel(event.target.value)}>
+                {AI_MODEL_OPTIONS.map((model) => (
+                  <option key={model} value={model}>{model}</option>
+                ))}
+              </select>
+            </label>
+
+            <label className="settings-field">
+              <span>{appLanguage === "en" ? "OpenAI API key" : "OpenAI API key"}</span>
+              <input
+                type="password"
+                value={settingsApiKey}
+                onChange={(event) => setSettingsApiKey(event.target.value)}
+                placeholder={aiHasKey
+                  ? (appLanguage === "en" ? "Saved. Enter a new key to replace it." : "已儲存。輸入新 key 可覆蓋。")
+                  : (appLanguage === "en" ? "Enter your API key" : "輸入你的 API key")}
+              />
+            </label>
+
+            <div className="settings-meta">
+              <span>{appLanguage === "en" ? "Current model" : "目前模型"}：{aiModel}</span>
+              <span>{aiHasKey ? (appLanguage === "en" ? "API key saved" : "API key 已儲存") : (appLanguage === "en" ? "No API key" : "尚未儲存 API key")}</span>
+            </div>
+
+            <div className="settings-actions">
+              <button type="button" className="secondary-action" onClick={() => setSettingsOpen(false)}>
+                {appLanguage === "en" ? "Cancel" : "取消"}
+              </button>
+              <button type="button" className="primary" onClick={saveAppSettings} disabled={settingsBusy}>
+                {settingsBusy ? (appLanguage === "en" ? "Saving..." : "儲存中...") : (appLanguage === "en" ? "Save settings" : "儲存設定")}
+              </button>
+            </div>
+          </section>
+        </div>
+      )}
     </main>
   );
 }

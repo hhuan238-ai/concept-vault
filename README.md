@@ -49,7 +49,9 @@ The in-app key is stored locally in Electron user data, not in this repository.
 
 ## OpenAI Model
 
-Precise answer mode and precise translation use `gpt-5.5` by default. To override it while launching the app, set:
+Precise answer mode and precise translation use `gpt-5.5` by default. You can change the default model from the settings button in the lower-right corner of the app.
+
+You can also override it while launching the app by setting:
 
 ```powershell
 $env:OPENAI_MODEL="gpt-5.4"
