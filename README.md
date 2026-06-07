@@ -47,6 +47,15 @@ You can set the key in either place:
 
 The in-app key is stored locally in Electron user data, not in this repository.
 
+## OpenAI Model
+
+Precise answer mode and precise translation use `gpt-5.5` by default. To override it while launching the app, set:
+
+```powershell
+$env:OPENAI_MODEL="gpt-5.4"
+npm.cmd run electron
+```
+
 ## Notes
 
 - Project databases are stored locally by the app.

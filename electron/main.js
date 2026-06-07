@@ -8,7 +8,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 let mainWindow;
-const AI_MODEL = "gpt-5.2";
+const AI_MODEL = process.env.OPENAI_MODEL || "gpt-5.5";
 
 function logRuntimeError(message) {
   const logPath = path.join(app.getPath("userData"), "runtime-errors.log");
