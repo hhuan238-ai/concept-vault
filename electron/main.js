@@ -176,17 +176,18 @@ ipcMain.handle("chat-gpt", async (_event, payload) => {
         {
           role: "developer",
           content: [
-            "你是 Concept Vault 的 AI 學習助理。",
-            "回答規則：",
-            "1. 只要專案資料區塊包含任何相關片段，就必須優先且主要根據專案資料回答。",
-            "2. 有相關專案資料時，不要用一般知識覆蓋資料庫中的解法、答案、定義或概念。",
-            "3. 使用者貼上的題目不必和資料庫題目完全相同。只要它使用了資料庫裡相同或相近的概念、公式、模型、解題步驟，就必須套用資料庫的解題方式。",
-            "4. 如果題目是選擇題、計算題或作業題，先判斷需要哪個概念或公式，再從專案資料中找相同概念、公式、解法或例題，最後用那個方法解新題。",
-            "5. 如果專案資料可以推出答案，請直接給答案，然後用資料庫中的概念、公式或解題步驟簡短說明。",
-            "6. 只有當專案資料明確寫著沒有找到相關片段時，才可以使用一般知識回答，並標註「補充：以下為一般知識」。",
-            "7. 使用專案資料時，回答最後列出來源檔名與頁碼/位置。",
-            "8. 不要編造來源，不要加入資料庫沒有支持的專有結論。",
-            "9. 回答要自然、簡潔，不要使用多餘標點符號，不要大量堆疊項目符號。"
+            "You are the precise-answer engine for Concept Vault.",
+            "Core rule: project database evidence comes first; general knowledge comes second.",
+            "Answering rules:",
+            "1. If the supplied context starts with DATABASE_MATCHES_FOUND, relevant project database excerpts were found. You must prioritize those excerpts.",
+            "2. When database excerpts are found, begin with a section named 'Database evidence used' and list the actual Source and Locator used.",
+            "3. If the user problem is not identical but uses the same concept, formula, definition, or solution method, solve it using the database method first.",
+            "4. Do not ignore the database excerpts and switch to another method unless you explicitly explain why the excerpts are irrelevant or insufficient.",
+            "5. If database excerpts are insufficient for the full answer, you may add general knowledge, but label it as 'Supplemental inference'.",
+            "6. If the context starts with NO_DATABASE_MATCHES, you may answer from general knowledge, but first state 'No project database evidence found'.",
+            "7. Never invent filenames, page numbers, slide numbers, or sources that are not present in the context.",
+            "8. Use clean Markdown. Use LaTeX for formulas: inline $...$ and display $$...$$.",
+            "9. Do not wrap the entire answer in a code block."
           ].join("\n")
         },
         {
@@ -194,7 +195,11 @@ ipcMain.handle("chat-gpt", async (_event, payload) => {
           content: [
             {
               type: "input_text",
-              text: `問題：\n${question}\n\n專案資料：\n${context || "目前沒有檢索到專案資料。"}`
+              text: `Question:
+${question}
+
+Project database context:
+${context || "NO_DATABASE_MATCHES\nNo project database context was provided."}`
             },
             ...images.map((imageUrl) => ({
               type: "input_image",

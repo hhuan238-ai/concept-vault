@@ -685,17 +685,29 @@ function App() {
 
   function buildAiContext(matches) {
     if (!matches.length) {
-      return "目前此專案資料庫沒有找到與問題明確相符的片段。請改用一般知識回答，並標註這是一般知識補充。";
+      return [
+        "NO_DATABASE_MATCHES",
+        "No sufficiently relevant project database excerpts were found. The model may answer from general knowledge, but it must clearly say the answer is not based on project database evidence."
+      ].join("\n");
     }
+
     const evidence = matches.map((match, index) => {
       const locator = formatSourceLocator(match);
       const excerpt = match.body.length > 1800 ? `${match.body.slice(0, 1800)}...` : match.body;
-      return `[${index + 1}] 來源：${match.file_name}，${locator}\n${excerpt}`;
+      return [
+        `[${index + 1}] Source: ${match.file_name}`,
+        `Locator: ${locator}`,
+        `Match score: ${Number(match.score || 0).toFixed(2)}`,
+        "Excerpt:",
+        excerpt
+      ].join("\n");
     }).join("\n\n");
+
     return [
-      "已找到相關專案資料。",
-      "即使使用者題目不是資料庫中的原題，只要用到相同概念、公式、模型或解題方法，就必須優先套用資料庫中的解法。",
-      "請先辨識題目需要的概念或公式，再根據下列資料庫片段的解題方式作答。",
+      "DATABASE_MATCHES_FOUND",
+      "The excerpts below are the strongest matches from this project database. The answer must prioritize these excerpts.",
+      "If the problem is not identical but uses the same concept, formula, definition, or solution method, use the database method first.",
+      "Do not replace these excerpts with general knowledge unless they are clearly irrelevant or insufficient.",
       "",
       evidence
     ].join("\n");
