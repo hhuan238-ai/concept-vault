@@ -106,7 +106,7 @@ ipcMain.handle("pick-files", async () => {
   const result = await dialog.showOpenDialog(mainWindow, {
     properties: ["openFile", "multiSelections"],
     filters: [
-      { name: "Documents", extensions: ["txt", "md", "csv", "tsv", "pdf", "docx"] },
+      { name: "Documents", extensions: ["txt", "md", "csv", "tsv", "xlsx", "xls", "xlsm", "pdf", "docx"] },
       { name: "All Files", extensions: ["*"] }
     ]
   });

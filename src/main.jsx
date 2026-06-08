@@ -23,6 +23,7 @@ import {
 import initSqlJs from "sql.js";
 import * as mammoth from "mammoth/mammoth.browser";
 import * as pdfjsLib from "pdfjs-dist";
+import * as XLSX from "xlsx";
 import sqlWasmUrl from "sql.js/dist/sql-wasm.wasm?url";
 import "katex/dist/katex.min.css";
 import "./styles.css";
@@ -243,6 +244,18 @@ async function extractText(file) {
   if (ext === "docx") {
     const result = await mammoth.extractRawText({ arrayBuffer: buffer });
     return chunkText(result.value, "段落");
+  }
+
+  if (["xlsx", "xls", "xlsm"].includes(ext)) {
+    const workbook = XLSX.read(buffer, { type: "array", cellDates: true });
+    const chunks = [];
+    for (const sheetName of workbook.SheetNames) {
+      const worksheet = workbook.Sheets[sheetName];
+      const csv = XLSX.utils.sheet_to_csv(worksheet, { blankrows: false });
+      const text = csv.trim();
+      if (text) chunks.push(...chunkText(text, `Excel 工作表 ${sheetName}`));
+    }
+    return chunks;
   }
 
   if (ext === "pdf") {
@@ -1035,7 +1048,7 @@ function App() {
                   <input
                     type="file"
                     multiple
-                    accept=".txt,.md,.csv,.tsv,.pdf,.docx"
+                    accept=".txt,.md,.csv,.tsv,.xlsx,.xls,.xlsm,.pdf,.docx"
                     disabled={isBusy}
                     onChange={importFiles}
                   />
@@ -1103,7 +1116,7 @@ function App() {
                     <input
                       type="file"
                       multiple
-                      accept=".txt,.md,.csv,.tsv,.pdf,.docx,image/*"
+                      accept=".txt,.md,.csv,.tsv,.xlsx,.xls,.xlsm,.pdf,.docx,image/*"
                       onChange={(event) => {
                         addQuestionFiles(event.target.files);
                         event.target.value = "";

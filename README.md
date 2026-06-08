@@ -5,7 +5,7 @@ Concept Vault is a Windows desktop app for project-based document search, local 
 ## Features
 
 - Create independent projects, each with its own local document database.
-- Upload TXT, Markdown, CSV, TSV, PDF, DOCX, and image files.
+- Upload TXT, Markdown, CSV, TSV, Excel, PDF, DOCX, and image files.
 - Build a searchable local database with source tracking, including PDF page numbers when available.
 - Ask questions in basic mode using local retrieval and template-style suggestions.
 - Use precise answer mode with OpenAI for harder questions, while prioritizing project documents and matched concepts.
