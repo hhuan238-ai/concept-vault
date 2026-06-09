@@ -363,7 +363,7 @@ function AnswerContent({ value, mode }) {
   return (
     <FormattedOutput
       value={value}
-      mode={mode === "basic" ? "plain" : "markdown"}
+      mode="markdown"
       fallback={fallback}
     />
   );
