@@ -10,6 +10,7 @@ Concept Vault is a Windows desktop app for project-based document search, local 
 - Ask questions in basic mode using local retrieval and template-style suggestions.
 - Use precise answer mode with OpenAI for harder questions, while prioritizing project documents and matched concepts.
 - Paste images or upload files into the question area.
+- Generate downloadable Excel answer attachments when a question asks for an Excel or spreadsheet-style answer.
 - Delete uploaded files and their related database chunks.
 - Translate text locally, with optional OpenAI translation and a shortcut to Google Translate.
 

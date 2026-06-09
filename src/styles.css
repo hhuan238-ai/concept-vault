@@ -562,6 +562,26 @@ pre {
   padding: 4px 0;
 }
 
+.answer-download {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 100%;
+  min-height: 40px;
+  margin-top: 10px;
+  border: 1px solid #cbd8cf;
+  border-radius: 8px;
+  padding: 0 12px;
+  color: #24312d;
+  background: #eef7f1;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.answer-download:hover {
+  background: #dcebe2;
+}
+
 .results-panel {
   grid-row: span 2;
 }

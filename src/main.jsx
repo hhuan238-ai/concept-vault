@@ -8,6 +8,7 @@ import {
   ArrowLeft,
   BookOpen,
   Database,
+  Download,
   FilePlus2,
   FolderPlus,
   Image,
@@ -421,6 +422,66 @@ function buildSuggestion(question, matches) {
   ].join("\n");
 }
 
+function wantsExcelAttachment(text) {
+  return /excel|xlsx|xls|試算表|表格檔|活頁簿/i.test(String(text || ""));
+}
+
+function cleanFilePart(value) {
+  const cleaned = String(value || "answer")
+    .replace(/[\\/:*?"<>|]+/g, "-")
+    .replace(/\s+/g, " ")
+    .trim();
+  return (cleaned || "answer").slice(0, 48);
+}
+
+function makeAnswerWorkbookAttachment({ question, answer, matches, projectName, mode }) {
+  const workbook = XLSX.utils.book_new();
+  const answerRows = [
+    ["Concept Vault Answer"],
+    ["Project", projectName || ""],
+    ["Mode", mode === "precise" ? "Precise" : "Basic"],
+    ["Created", new Date().toLocaleString()],
+    ["Question"],
+    [question || ""],
+    ["Answer"],
+    ...String(answer || "").split(/\r?\n/).map((line) => [line])
+  ];
+  const answerSheet = XLSX.utils.aoa_to_sheet(answerRows);
+  answerSheet["!cols"] = [{ wch: 120 }];
+  XLSX.utils.book_append_sheet(workbook, answerSheet, "Answer");
+
+  const sourceRows = [
+    ["#", "Source", "Locator", "Score", "Excerpt"],
+    ...(matches || []).map((match, index) => [
+      index + 1,
+      match.file_name || "",
+      formatSourceLocator(match),
+      Number(match.score || 0),
+      String(match.body || "").slice(0, 4000)
+    ])
+  ];
+  const sourceSheet = XLSX.utils.aoa_to_sheet(sourceRows);
+  sourceSheet["!cols"] = [
+    { wch: 6 },
+    { wch: 36 },
+    { wch: 34 },
+    { wch: 10 },
+    { wch: 100 }
+  ];
+  XLSX.utils.book_append_sheet(workbook, sourceSheet, "Sources");
+
+  const bytes = XLSX.write(workbook, { bookType: "xlsx", type: "array" });
+  const blob = new Blob([bytes], {
+    type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+  });
+  const stamp = new Date().toISOString().slice(0, 10);
+  return {
+    name: `${cleanFilePart(projectName)}-${mode}-answer-${stamp}.xlsx`,
+    url: URL.createObjectURL(blob),
+    type: "excel"
+  };
+}
+
 function App() {
   const [db, setDb] = useState(null);
   const [projects, setProjects] = useState([]);
@@ -432,6 +493,7 @@ function App() {
   const [questionAttachments, setQuestionAttachments] = useState([]);
   const [results, setResults] = useState([]);
   const [suggestion, setSuggestion] = useState("");
+  const [answerAttachment, setAnswerAttachment] = useState(null);
   const [status, setStatus] = useState("正在初始化資料庫...");
   const [isBusy, setIsBusy] = useState(false);
   const [sourceLang, setSourceLang] = useState("auto");
@@ -489,6 +551,28 @@ function App() {
     });
   }, []);
 
+  function updateAnswerAttachment(nextAttachment) {
+    setAnswerAttachment((current) => {
+      if (current?.url) URL.revokeObjectURL(current.url);
+      return nextAttachment;
+    });
+  }
+
+  function createRequestedAnswerAttachment({ fullQuestion, answer, matches, mode }) {
+    if (!wantsExcelAttachment(fullQuestion)) {
+      updateAnswerAttachment(null);
+      return;
+    }
+
+    updateAnswerAttachment(makeAnswerWorkbookAttachment({
+      question: fullQuestion,
+      answer,
+      matches,
+      projectName: activeProject?.name,
+      mode
+    }));
+  }
+
   function refresh(database = db, projectId = activeProjectId) {
     if (!database) return;
     const nextProjects = queryRows(database, "SELECT * FROM projects ORDER BY created_at DESC");
@@ -503,6 +587,7 @@ function App() {
       setChunks([]);
       setResults([]);
       setSuggestion("");
+      updateAnswerAttachment(null);
       setQuestion("");
       setQuestionAttachments([]);
       setTranslationInput("");
@@ -604,6 +689,7 @@ function App() {
     await saveDatabase(db);
     setResults([]);
     setSuggestion("");
+    updateAnswerAttachment(null);
     refresh(db, activeProjectId);
     setStatus(`已刪除「${fileName}」與其資料庫片段。`);
   }
@@ -652,8 +738,15 @@ function App() {
       .sort((a, b) => b.score - a.score || b.body.length - a.body.length)
       .slice(0, 8);
 
+    const nextSuggestion = buildSuggestion(fullQuestion, matches);
     setResults(matches);
-    setSuggestion(buildSuggestion(fullQuestion, matches));
+    setSuggestion(nextSuggestion);
+    createRequestedAnswerAttachment({
+      fullQuestion,
+      answer: nextSuggestion,
+      matches,
+      mode: "basic"
+    });
     setStatus(matches.length ? `在此專案找到 ${matches.length} 個相符片段。` : "此專案沒有找到相符片段。");
   }
 
@@ -767,6 +860,7 @@ function App() {
 
     setAiBusy(true);
     setSuggestion("");
+    updateAnswerAttachment(null);
     try {
       const matches = fullQuestion ? findProjectMatches(fullQuestion, 14) : [];
       const result = await window.conceptVault?.chatGpt({
@@ -775,8 +869,15 @@ function App() {
         context: buildAiContext(matches),
         images
       });
+      const answer = result?.output || "No precise answer was returned.";
       setResults(matches);
-      setSuggestion(result?.output || "沒有收到精確回答。");
+      setSuggestion(answer);
+      createRequestedAnswerAttachment({
+        fullQuestion,
+        answer,
+        matches,
+        mode: "precise"
+      });
       setStatus(matches.length ? "精確回答已完成，並已參考專案資料。" : "精確回答已完成；資料庫沒有相關片段，已改用一般知識。");
     } catch (error) {
       setStatus(`精確回答失敗：${error.message}`);
@@ -1182,6 +1283,16 @@ function App() {
                     <h3>{questionMode === "basic" ? "模板式建議" : "精確回答"}</h3>
                   </div>
                   <AnswerContent value={suggestion} mode={questionMode} />
+                  {answerAttachment && (
+                    <a
+                      className="answer-download"
+                      href={answerAttachment.url}
+                      download={answerAttachment.name}
+                    >
+                      <Download size={17} />
+                      下載答案附件：{answerAttachment.name}
+                    </a>
+                  )}
                 </div>
               </section>
 
